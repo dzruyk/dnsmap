@@ -20,7 +20,7 @@
 #define MAXSUBSIZE 	100
 #define MAXSTRSIZE 	200
 #define BANNER 		"dnsmap 0.30 - DNS Network Mapper by pagvac (gnucitizen.org)\n\n"
-#define USAGE 		"usage: dnsmap <target-domain> [options]\noptions:\n"\
+#define USAGE 		"usage: dnsmap [options] <target-domain>\noptions:\n"\
 			"-w <wordlist-file>\n-r <regular-results-file>\n-c <csv-results-file>\n"\
 			"-d <delay-millisecs>\n-i <ips-to-ignore> (useful if you're obtaining false positives)\n\n"
 #define EXAMPLES 	"e.g.:\ndnsmap target-domain.foo\n"\
@@ -29,24 +29,16 @@
 			"dnsmap target-fomain.foo -r ./domainbf_results.txt\n\n"
 #define INTIPWARN	"[+] warning: internal IP address disclosed\n"
 #define SAMESITEXSSWARN "[+] warning: domain might be vulnerable to \"same site\" scripting (http://snipurl.com/etbcv)\n"
-#define WILDCARDWARN	"[+] warning: domain might use wildcards. "\
-			"%s will be ignored from results\n", wildcardIpStr
 #define INPUTERR	"[+] error: entered parameter(s) is/are too long!\n"
 #define DELAYINPUTERR	"[+] error: delay must be between 1 and 300000 milliseconds (5 minutes)!\n"
 #define FILTIPINPUTERR	"[+] error: the maxium number of IPs to filter is 5!\n"
 #define DOMAINERR	"[+] error: entered domain is not valid!\n"
-#define CREATEFILEERR	"%s\"%s\"!\n\n", "[+] error creating results file on ", argv[(i+1)]
-#define OPENFILEERR	"%s\"%s\"!\n\n", "[+] error opening wordlist file ", wordlistFilename
 #define OPENDNSMSG	"[+] openDNS detected. good! this might help with performance\n"
+
+#define WILDCARDWARN	"[+] warning: domain might use wildcards. "\
+			"%s will be ignored from results\n", wildcardIpStr
 #define BUILTINMSG	"%s%s%s\n", "[+] searching (sub)domains for ", argv[1], " using built-in wordlist"
-#define EXTERNALMSG	"%s%s%s%s\n", "[+] searching (sub)domains for ", argv[1], " using ", wordlistFilename
-#define DELAYMSG	"%s%d%s\n", "[+] using maximum random delay of ", milliseconds, " millisecond(s) between requests"
-#define FILTERMSG	"[+] %d provided IP address(es) will be ignored from results: %s\n", filtIPcount, argv[i+1] 
-#define RESULTSMSG1	"[+] %d internal IP address(es) disclosed\n", intIPcount
-#define RESULTSMSG2	"[+] regular-format results can be found on %s\n", txtResultsFilename
-#define RESULTSMSG3	"[+] completion time: %lu second(s)\n", end-start
-#define RESULTSMSG4	"[+] %d%s%d%s\n", found, " (sub)domains and ",ipCount, " IP address(es) found"
-#define RESULTSMSG5	"[+] csv-format results can be found on %s\n", csvResultsFilename
+
 #define FALSE 0
 #define TRUE 1
 
