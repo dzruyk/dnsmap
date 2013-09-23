@@ -1,0 +1,124 @@
+!_TAG_FILE_FORMAT	2	/extended format; --format=1 will not append ;" to lines/
+!_TAG_FILE_SORTED	1	/0=unsorted, 1=sorted, 2=foldcase/
+!_TAG_PROGRAM_AUTHOR	Darren Hiebert	/dhiebert@users.sourceforge.net/
+!_TAG_PROGRAM_NAME	Exuberant Ctags	//
+!_TAG_PROGRAM_URL	http://ctags.sourceforge.net	/official site/
+!_TAG_PROGRAM_VERSION	5.9~svn20110310	//
+BANNER	./dnsmap.h	22;"	d
+BINDIR	./Makefile	/^BINDIR=\/usr\/local\/bin$/;"	m
+BUILTINMSG	./dnsmap.h	41;"	d
+CC	./Makefile	/^CC=gcc$/;"	m
+CFLAGS	./Makefile	/^CFLAGS=-I.$/;"	m
+CREATEFILEERR	./dnsmap.h	38;"	d
+DEBUG	./dnsmap.h	53;"	d
+DEBUG_MSG	./dnsmap.h	57;"	d
+DEBUG_MSG	./dnsmap.h	66;"	d
+DELAYINPUTERR	./dnsmap.h	35;"	d
+DELAYMSG	./dnsmap.h	43;"	d
+DOMAINERR	./dnsmap.h	37;"	d
+EXAMPLES	./dnsmap.h	26;"	d
+EXTERNALMSG	./dnsmap.h	42;"	d
+FALSE	./dnsmap.h	50;"	d
+FILTERMSG	./dnsmap.h	44;"	d
+FILTIPINPUTERR	./dnsmap.h	36;"	d
+INPUTERR	./dnsmap.h	34;"	d
+INTIPWARN	./dnsmap.h	30;"	d
+MAXSTRSIZE	./dnsmap.h	21;"	d
+MAXSUBSIZE	./dnsmap.h	20;"	d
+OPENDNSMSG	./dnsmap.h	40;"	d
+OPENFILEERR	./dnsmap.h	39;"	d
+OUT_CSV	./dnsmap.c	45;"	d	file:
+OUT_REG	./dnsmap.c	44;"	d	file:
+OUT_STD	./dnsmap.c	43;"	d	file:
+RESULTSMSG1	./dnsmap.h	45;"	d
+RESULTSMSG2	./dnsmap.h	46;"	d
+RESULTSMSG3	./dnsmap.h	47;"	d
+RESULTSMSG4	./dnsmap.h	48;"	d
+RESULTSMSG5	./dnsmap.h	49;"	d
+SAMESITEXSSWARN	./dnsmap.h	31;"	d
+TRUE	./dnsmap.h	51;"	d
+USAGE	./dnsmap.h	23;"	d
+WILDCARDWARN	./dnsmap.h	32;"	d
+addr	./dnsmap.c	/^						void *addr;$/;"	l
+addr	./dnsmap.c	/^	void *addr;$/;"	l
+classB	./dnsmap.c	/^	char classB[][8]={"172.16.","172.17.","172.18.","172.19.",$/;"	l
+csvResults	./dnsmap.c	/^		wordlist=FALSE, txtResults=FALSE, csvResults=FALSE,$/;"	l
+csvResultsFilename	./dnsmap.c	/^	char dom[MAXSTRSIZE]={'\\0'}, csvResultsFilename[MAXSTRSIZE]={'\\0'},$/;"	l
+delay	./dnsmap.c	/^		delay=TRUE, filter=FALSE;$/;"	l
+delay	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+delay	./dnsmap.c	/^int delay = 0;$/;"	v
+dodelay	./dnsmap.c	/^unsigned short int dodelay(unsigned short int maxmillisecs) {$/;"	f	signature:(unsigned short int maxmillisecs)
+dom	./dnsmap.c	/^	char dom[MAXSTRSIZE]={'\\0'}, csvResultsFilename[MAXSTRSIZE]={'\\0'},$/;"	l
+dummyLTD	./dnsmap.c	/^	char strTmp[30]={'\\0'}, s[MAXSTRSIZE]={'\\0'}, dummyLTD[4]={"xyz"}\/*, ipstr[INET_ADDRSTRLEN]={'\\0'}*\/;$/;"	l
+end	./dnsmap.c	/^	unsigned long int start=0, end=0;$/;"	l
+filtIPcount	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+filter	./dnsmap.c	/^		delay=TRUE, filter=FALSE;$/;"	l
+filterIPs	./dnsmap.c	/^		filterIPs[5][INET_ADDRSTRLEN]={{'\\0'}},$/;"	l
+found	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+fpCsvLogs	./dnsmap.c	/^	FILE *fpWords,*fpCsvLogs,*fpTxtLogs;$/;"	l
+fpTxtLogs	./dnsmap.c	/^	FILE *fpWords,*fpCsvLogs,*fpTxtLogs;$/;"	l
+fpWords	./dnsmap.c	/^	FILE *fpWords,*fpCsvLogs,*fpTxtLogs;$/;"	l
+fp_out	./dnsmap.c	/^FILE *fp_out;$/;"	v
+h	./dnsmap.c	/^	struct hostent *h;$/;"	l
+hints	./dnsmap.c	/^	struct addrinfo hints, *res, *p;$/;"	l
+i	./dnsmap.c	/^	int i;$/;"	l
+i	./dnsmap.c	/^	unsigned int i=0, j=0;$/;"	l
+i	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+i	./dnsmap.c	/^	unsigned short int i=0,j=0,n=0,max=0;$/;"	l
+i	./dnsmap.c	/^	unsigned short int i=0,j=0;$/;"	l
+i	./dnsmap.c	/^	unsigned short int i=0,n=0,max=0;$/;"	l
+intIPcount	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+invalidTldIpstr	./dnsmap.c	/^		invalidTldIpstr[INET_ADDRSTRLEN]={'\\0'};$/;"	l
+ipCount	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+ips	./dnsmap.c	/^	char ips[][INET_ADDRSTRLEN]={"67.215.65.132"};$/;"	l
+ips	./dnsmap.c	/^	char ips[][INET_ADDRSTRLEN]={$/;"	l
+ipstr	./dnsmap.c	/^		ipstr[INET_ADDRSTRLEN]={'\\0'}, wildcardIpStr[INET_ADDRSTRLEN]={'\\0'},$/;"	l
+ipv6	./dnsmap.c	/^							struct sockaddr_in6 *ipv6=(struct sockaddr_in6 *)p->ai_addr;$/;"	l
+ipv6	./dnsmap.c	/^						struct sockaddr_in6 *ipv6=(struct sockaddr_in6 *)p->ai_addr;$/;"	l
+ipv6str	./dnsmap.c	/^	char ipv6str[INET6_ADDRSTRLEN];$/;"	l
+ipver	./dnsmap.c	/^						char *ipver;$/;"	l
+ipver	./dnsmap.c	/^	char *ipver, *strP;$/;"	l
+isIPblacklisted	./dnsmap.c	/^unsigned short int isIPblacklisted(char *ip) {$/;"	f	signature:(char *ip)
+isPrivateIP	./dnsmap.c	/^unsigned short int isPrivateIP(char *ip) {$/;"	f	signature:(char *ip)
+isValidDomain	./dnsmap.c	/^unsigned short int isValidDomain(char *d) {$/;"	f	signature:(char *d)
+j	./dnsmap.c	/^	unsigned int i=0, j=0;$/;"	l
+j	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+j	./dnsmap.c	/^	unsigned short int i=0,j=0,n=0,max=0;$/;"	l
+j	./dnsmap.c	/^	unsigned short int i=0,j=0;$/;"	l
+k	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+l	./dnsmap.c	/^	unsigned short int i=0, j=0, k=0, l=0, found=0, ipCount=0, filtIPcount=0, delay=10, intIPcount=0,$/;"	l
+len	./dnsmap.c	/^	size_t len = strlen(ip);$/;"	l
+len	./dnsmap.c	/^	size_t len;$/;"	l
+main	./dnsmap.c	/^int main(int argc, char *argv[]) {$/;"	f	signature:(int argc, char *argv[])
+max	./dnsmap.c	/^	unsigned short int i=0,j=0,n=0,max=0;$/;"	l
+max	./dnsmap.c	/^	unsigned short int i=0,n=0,max=0;$/;"	l
+max	./dnsmap.c	/^	unsigned short int n=0,max=0;$/;"	l
+n	./dnsmap.c	/^	unsigned short int i=0,j=0,n=0,max=0;$/;"	l
+n	./dnsmap.c	/^	unsigned short int i=0,n=0,max=0;$/;"	l
+n	./dnsmap.c	/^	unsigned short int n=0,max=0;$/;"	l
+n	./dnsmap.c	/^	unsigned short int n=0;$/;"	l
+name	./dnsmap.c	/^	char *name;$/;"	l
+now	./dnsmap.c	/^	time_t     now;$/;"	l
+outfmt	./dnsmap.c	/^	int outfmt = OUT_STD;$/;"	l
+p	./dnsmap.c	/^	struct addrinfo hints, *res, *p;$/;"	l
+parse_args	./dnsmap.c	/^parse_args()$/;"	f
+res	./dnsmap.c	/^	struct addrinfo hints, *res, *p;$/;"	l
+results_fn	./dnsmap.c	/^char results_fn[MAXSTRSIZE]={'\\0'};$/;"	v
+s	./dnsmap.c	/^	char strTmp[30]={'\\0'}, s[MAXSTRSIZE]={'\\0'}, dummyLTD[4]={"xyz"}\/*, ipstr[INET_ADDRSTRLEN]={'\\0'}*\/;$/;"	l
+s	./dnsmap.c	/^	char strTmp[30]={'\\0'},s[MAXSTRSIZE]={'\\0'};$/;"	l
+start	./dnsmap.c	/^	unsigned long int start=0, end=0;$/;"	l
+status	./dnsmap.c	/^	int status;$/;"	l
+strP	./dnsmap.c	/^	char *ipver, *strP;$/;"	l
+strTmp	./dnsmap.c	/^	char strTmp[30]={'\\0'}, s[MAXSTRSIZE]={'\\0'}, dummyLTD[4]={"xyz"}\/*, ipstr[INET_ADDRSTRLEN]={'\\0'}*\/;$/;"	l
+strTmp	./dnsmap.c	/^	char strTmp[30]={'\\0'},s[MAXSTRSIZE]={'\\0'};$/;"	l
+sub	./dnsmap.h	/^char sub[][MAXSUBSIZE]=$/;"	v
+timestampBuf	./dnsmap.c	/^	char       timestampBuf[18];$/;"	l
+tld	./dnsmap.c	/^	char *tld;$/;"	l
+ts	./dnsmap.c	/^	struct tm  *ts;$/;"	l
+txtResults	./dnsmap.c	/^		wordlist=FALSE, txtResults=FALSE, csvResults=FALSE,$/;"	l
+use_wordlist	./dnsmap.c	/^int use_wordlist = 0;$/;"	v
+usesOpenDNS	./dnsmap.c	/^unsigned short int usesOpenDNS(char *ipstr) {$/;"	f	signature:(char *ipstr)
+wildcarDetect	./dnsmap.c	/^unsigned short int wildcarDetect(char *dom, char *ipstr) {$/;"	f	signature:(char *dom, char *ipstr)
+wildcardIpStr	./dnsmap.c	/^		ipstr[INET_ADDRSTRLEN]={'\\0'}, wildcardIpStr[INET_ADDRSTRLEN]={'\\0'},$/;"	l
+wordlist	./dnsmap.c	/^		wordlist=FALSE, txtResults=FALSE, csvResults=FALSE,$/;"	l
+wordlistFilename	./dnsmap.c	/^char wordlistFilename[MAXSTRSIZE]={'\\0'};$/;"	v
