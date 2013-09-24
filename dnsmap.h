@@ -35,10 +35,6 @@
 #define DOMAINERR	"[+] error: entered domain is not valid!\n"
 #define OPENDNSMSG	"[+] openDNS detected. good! this might help with performance\n"
 
-#define WILDCARDWARN	"[+] warning: domain might use wildcards. "\
-			"%s will be ignored from results\n", wildcardIpStr
-#define BUILTINMSG	"%s%s%s\n", "[+] searching (sub)domains for ", argv[1], " using built-in wordlist"
-
 #define FALSE 0
 #define TRUE 1
 
