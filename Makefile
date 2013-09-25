@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS=-I.
+CFLAGS=-I. -Wall -ggdb
 BINDIR=/usr/local/bin
 
 dnsmap: dnsmap.c dnsmap.h

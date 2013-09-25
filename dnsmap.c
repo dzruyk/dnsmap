@@ -50,7 +50,7 @@ char *dnsname = NULL;
 int use_wordlist = 0;
 char wordlist_file[MAXSTRSIZE] = {'\0'};
 
-int delay = 10;
+int delay = 0;
 
 int outfmt = OUT_STD;
 char results_fn[MAXSTRSIZE] = {'\0'};
@@ -68,7 +68,7 @@ int intIPcount = 0;
 void
 generic_output(char *ipstr, int filter, int i, char *dom)
 {
-	if (strcmp(wildcardIpStr, ipstr) != 0 || filter == TRUE)
+	if (strcmp(wildcardIpStr, ipstr) == 0 || filter == TRUE)
 		return;
 
 	if (i == 0) {
@@ -101,6 +101,7 @@ generic_output(char *ipstr, int filter, int i, char *dom)
 		fprintf(fp_out, ",%s", ipstr);
 }
 
+//FIXME: FILTER is unnecessary, rewrite without it!
 void
 check_is_blacklisted(struct hostent *h, char *dom)
 {
@@ -245,6 +246,8 @@ use_user_list()
 	char dom[MAXSTRSIZE] = {'\0'};
 	int i;
 
+	printf("[+] searching (sub)domains for %s using %s\n", dnsname, wordlist_file);
+
 	fp = fopen(wordlist_file, "r");
 	if (!fp) {
 		printf("%s\"%s\"!\n\n", "[+] error opening wordlist file ", wordlist_file);
@@ -252,8 +255,6 @@ use_user_list()
 	}
 
 	maybe_open_result_file();
-
-	printf("[+] searching (sub)domains for %s using %s\n", dnsname, wordlist_file);
 
 	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
@@ -270,7 +271,6 @@ use_user_list()
 		DEBUG_MSG("brute-forced domain: %s\n", dom);
 
 		check_host(dom);
-
 	}
 	fclose(fp);
 	maybe_close_result_file();
