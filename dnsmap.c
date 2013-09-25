@@ -50,7 +50,7 @@ char *dnsname = NULL;
 int use_wordlist = 0;
 char wordlist_file[MAXSTRSIZE] = {'\0'};
 
-int delay = 0;
+int delay = 10;
 
 int outfmt = OUT_STD;
 char results_fn[MAXSTRSIZE] = {'\0'};
@@ -59,75 +59,84 @@ FILE *fp_out;
 int filtered_ip_cnt = 0;
 char filterIPs[5][INET_ADDRSTRLEN] = {{'\0'}};
 
+/* FIXME: create context structure */
+char wildcardIpStr[INET_ADDRSTRLEN] = {'\0'};
+int found = 0; 
+int ipCount = 0;
+int intIPcount = 0;
+
 void
-generic_output()
+generic_output(char *ipstr, int filter, int i, char *dom)
 {
-	if(strcmp(wildcardIpStr, ipstr) != 0 || filter== TRUE)
+	if (strcmp(wildcardIpStr, ipstr) != 0 || filter == TRUE)
 		return;
 
-	if(j==0) {
+	if (i == 0) {
 		++found;
 		printf("%s\n", dom);
 
-		if(txtResults)
+		if (outfmt == OUT_REG)
 			fprintf(fp_out, "%s\n", dom);
-		if(csvResults)
+		if (outfmt == OUT_CSV)
 			fprintf(fp_out, "%s", dom);
 	}
-	printf("IP address #%d: %s\n", j+1, ipstr);
+	printf("IP address #%d: %s\n", i + 1, ipstr);
 	++ipCount;
 
-	if(isPrivateIP(ipstr)) {
+	if (isPrivateIP(ipstr)) {
 		printf("%s", INTIPWARN);
 		++intIPcount;
 	}
-	if(!strcmp(ipstr, "127.0.0.1") && strcmp(wildcardIpStr, ipstr)) {
+	if (!strcmp(ipstr, "127.0.0.1") && strcmp(wildcardIpStr, ipstr)) {
 		printf("%s", SAMESITEXSSWARN);
 	}
-	if(txtResults) {
-		fprintf(fp_out, "IP address #%d: %s\n", j+1, ipstr);
-		if(isPrivateIP(ipstr) && strcmp(wildcardIpStr, ipstr))
+	if (outfmt == OUT_REG) {
+		fprintf(fp_out, "IP address #%d: %s\n", i + 1, ipstr);
+		if (isPrivateIP(ipstr) && strcmp(wildcardIpStr, ipstr))
 			fprintf(fp_out, "%s", INTIPWARN);
-		if(!strcmp(ipstr, "127.0.0.1") && strcmp(wildcardIpStr, ipstr))
+		if (!strcmp(ipstr, "127.0.0.1") && strcmp(wildcardIpStr, ipstr))
 			fprintf(fp_out, "%s", SAMESITEXSSWARN);
 	}
-	if(csvResults && strcmp(wildcardIpStr, ipstr))
-		fprintf(fp_out, ", %s", ipstr);
+	if (outfmt == OUT_CSV && strcmp(wildcardIpStr, ipstr))
+		fprintf(fp_out, ",%s", ipstr);
 }
 
 void
-check_is_blacklisted()
+check_is_blacklisted(struct hostent *h, char *dom)
 {
-	if(!h || isIPblacklisted(inet_ntoa(*((struct in_addr *)h->h_addr_list[0]))))
+	char ipstr[INET_ADDRSTRLEN] = {'\0'};
+	int i, j;
+	int filter = FALSE;
+
+	if (!h || isIPblacklisted(inet_ntoa(*((struct in_addr *)h->h_addr_list[0]))))
 		return;
 
-	for(j = 0; h->h_addr_list[j]; ++j) {
-		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[j])), "%s");
-		for(k = 0; k < filtered_ip_cnt; ++k) {
-			if(strcmp(filterIPs[k], ipstr) == 0) { // filtered IP found
+	for (i = 0; h->h_addr_list[i]; ++i) {
+		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[i])), "%s");
+		for (j = 0; j < filtered_ip_cnt; ++j) {
+			if (strcmp(filterIPs[j], ipstr) == 0) { // filtered IP found
 				// 1st IP of array - weird output formatting bug
-				if(j != 0 && strcmp(wildcardIpStr, filterIPs[k])) {
+				if (i != 0 && strcmp(wildcardIpStr, filterIPs[j])) {
 					printf("\n");
-					if(outfmt == OUT_REG || outfmt == OUT_CSV)
+					if (outfmt == OUT_REG || outfmt == OUT_CSV)
 						fprintf(fp_out, "\n");
 				}
-				DEBUG_MSG("%s found and ignored\n", filterIPs[k]);
+				DEBUG_MSG("%s found and ignored\n", filterIPs[j]);
 				filter = TRUE;
-				if(h->h_addr_list[j + 1])
-					++j;
+				if (h->h_addr_list[i + 1])
+					++i;
 				else
 					break;
 			}
 		}
-		generic_output();
-
+		generic_output(ipstr, filter, i, dom);
 	}
-	if(strcmp(wildcardIpStr, ipstr) && filter == FALSE) {
-		printf("%s", "\n");
-		if(outfmt == OUT_REG || outfmt == OUT_CSV)
+
+	if (strcmp(wildcardIpStr, ipstr) && filter == FALSE) {
+		printf("\n");
+		if (outfmt == OUT_REG || outfmt == OUT_CSV)
 			fprintf(fp_out, "\n");
 	}
-	filter = FALSE;
 }
 
 void
@@ -146,11 +155,11 @@ check_host(char *dom)
 	if (getaddrinfo(dom, NULL, &hints, &res) == 0) {
 		printf("%s\n", dom);
 		++found;
-		if(txtResults)
+		if (outfmt == OUT_REG)
 			fprintf(fp_out, "%s\n", dom);
-		if(csvResults)
+		if (outfmt == OUT_CSV)
 			fprintf(fp_out, "%s", dom);
-		for(p = res, i = 0; p ;p = p->ai_next, ++i) {
+		for (p = res, i = 0; p ;p = p->ai_next, ++i) {
 			void *addr;
 			char *ipver;
 			if (p->ai_family==AF_INET6) { // IPv6
@@ -162,13 +171,13 @@ check_host(char *dom)
 			inet_ntop(p->ai_family, addr, ipv6str, sizeof(ipv6str));
 			printf("%s address #%d: %s\n", ipver, i+1, ipv6str);
 			++ipCount;
-			if(txtResults)
+			if (outfmt == OUT_REG)
 				fprintf(fp_out, "%s address #%d: %s\n", ipver, i+1, ipv6str);
-			if(csvResults)
+			if (outfmt == OUT_CSV)
 				fprintf(fp_out, ", %s", ipv6str);
 		}
-		printf("%s", "\n");
-		if(outfmt == OUT_REG || outfmt == OUT_CSV)
+		printf("\n");
+		if (outfmt == OUT_REG || outfmt == OUT_CSV)
 			fprintf(fp_out, "\n");
 
 		freeaddrinfo(res); // free the linked list
@@ -176,11 +185,33 @@ check_host(char *dom)
 	}
 	h = gethostbyname(dom);
 
-	check_is_blacklisted();
+	check_is_blacklisted(h, dom);
 
 	/* User wants delay between DNS requests? */
-	if(delay)
+	if (delay)
 		dodelay(delay);
+}
+
+void
+maybe_open_result_file()
+{
+	if (outfmt == OUT_STD)
+		return;
+
+	fp_out = fopen(results_fn, "a");
+	if (!fp_out) {
+		printf("[+] error creating results file on \"%s\"!\n\n", results_fn);
+		exit(1);
+	}
+}
+
+void
+maybe_close_result_file()
+{
+	if (outfmt == OUT_STD)
+		return;
+
+	fclose(fp_out);
 }
 
 void
@@ -189,18 +220,14 @@ use_builtin_list()
 	char dom[MAXSTRSIZE] = {'\0'};
 	int i;
 
+	maybe_open_result_file();
+
 	printf("[+] searching (sub)domains for %s using built-in wordlist", dnsname);
-
-	fp_out = fopen(results_fn, "a");
-	if(!fp_out) {
-		printf("%s\"%s\"!\n\n", "[+] error creating results file on ", results_fn);
-		exit(1);
-	}
-
-	if(delay >= 1)
+	
+	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
 
-	for(i = 0; i < (sizeof(sub) / MAXSUBSIZE); ++i) {
+	for (i = 0; i < (sizeof(sub) / MAXSUBSIZE); ++i) {
 		strncpy(dom, sub[i], MAXSTRSIZE-strlen(dom) - 1);
 		strncat(dom, ".", MAXSTRSIZE-strlen(dom) - 1);
 		strncat(dom, dnsname, MAXSTRSIZE-strlen(dom) - 1);
@@ -208,7 +235,7 @@ use_builtin_list()
 
 		check_host(dom);
 	}
-	fclose(fp_out);
+	maybe_close_result_file();
 }
 
 void
@@ -216,27 +243,24 @@ use_user_list()
 {
 	FILE *fp;
 	char dom[MAXSTRSIZE] = {'\0'};
+	int i;
 
 	fp = fopen(wordlist_file, "r");
-	if(!fp) {
+	if (!fp) {
 		printf("%s\"%s\"!\n\n", "[+] error opening wordlist file ", wordlist_file);
 		exit(1);
 	}
 
-	fp_out = fopen(results_fn, "a");
-	if(!fp_out) {
-		printf("[+] error creating results file on \"%s\"!\n\n", results_fn);
-		exit(1);
-	}
+	maybe_open_result_file();
 
 	printf("[+] searching (sub)domains for %s using %s\n", dnsname, wordlist_file);
 
-	if(delay >= 1)
+	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
 
-	while(!feof(fp)) {
+	while (!feof(fp)) {
 		//strncpy(dom, "", MAXSTRSIZE-strlen(dom)-1);
-		for(i = 0;i<strlen(dom);++i)
+		for (i = 0; i < strlen(dom); ++i)
 			dom[i] = '\0';
 		fscanf(fp, "%100s", dom); // wordlist subdomain not allowed to be more than 100 chars
 		DEBUG_MSG("lengh of dom: %d\n", strlen(dom));
@@ -249,27 +273,26 @@ use_user_list()
 
 	}
 	fclose(fp);
-	fclose(fp_out);
+	maybe_close_result_file();
 }
 
 void
 brute_domains()
 {
 	char invalidTldIpstr[INET_ADDRSTRLEN] = {'\0'};
-	char ipstr[INET_ADDRSTRLEN] = {'\0'}, wildcardIpStr[INET_ADDRSTRLEN] = {'\0'};
 
 	// openDNS detection
-	if(usesOpenDNS(invalidTldIpstr))
+	if (usesOpenDNS(invalidTldIpstr))
 		printf("%s", OPENDNSMSG);
 
 	// wildcard detection
 	wildcarDetect(dnsname, wildcardIpStr);
 
-	if(strcmp(invalidTldIpstr, wildcardIpStr))
+	if (strcmp(invalidTldIpstr, wildcardIpStr))
 		printf("[+] warning: domain might use wildcards. "\
 			"%s will be ignored from results\n", wildcardIpStr);
 
-	if(!use_wordlist) {
+	if (!use_wordlist) {
 		use_builtin_list();
 	} else {
 		use_user_list();
@@ -284,20 +307,20 @@ parse_ip_filter(char *str)
 	int i;
 
 	// filter out user-provided IP(s)
-	for(filtered_ip_cnt = 1, i = 0; str[i] != '\0'; ++i)
-		if(str[i] == ',')
+	for (filtered_ip_cnt = 1, i = 0; str[i] != '\0'; ++i)
+		if (str[i] == ',')
 			++filtered_ip_cnt;
 
 	DEBUG_MSG("%d IP(s) to filter found\nParsing ...\n", filtered_ip_cnt);
 
-	if(filtered_ip_cnt > 5) {
+	if (filtered_ip_cnt > 5) {
 		printf(FILTIPINPUTERR);
 		exit(1);
 	}
 	printf("[+] %d provided IP address(es) will be ignored from results: %s\n", filtered_ip_cnt, str);
 	strP = strtok(str, ",");
-	for(i = 0; strP;) {
-		if(strlen(strP) < INET_ADDRSTRLEN) {
+	for (i = 0; strP;) {
+		if (strlen(strP) < INET_ADDRSTRLEN) {
 			strncpy(filterIPs[i], strP, INET_ADDRSTRLEN);
 			DEBUG_MSG("%s\n", filterIPs[i]);
 			++i;
@@ -312,7 +335,7 @@ parse_args(int argc, char *argv[])
 	char *name;
 	int i, opt;
 
-	if(argc == 1) {
+	if (argc == 1) {
 		printf("%s%s", USAGE, EXAMPLES);
 		exit(1);
 	}
@@ -361,12 +384,12 @@ parse_args(int argc, char *argv[])
 
 	dnsname = argv[0];
 
-	for(i = 0; dnsname[i]; ++i) // convert domain to lower case
+	for (i = 0; dnsname[i]; ++i) // convert domain to lower case
 		dnsname[i] = tolower(dnsname[i]);
 
 	DEBUG_MSG("domain: %s\n", dnsname);
 
-	if(!isValidDomain(dnsname)) {
+	if (!isValidDomain(dnsname)) {
 		printf("%s", DOMAINERR);
 		exit(1);
 	}
@@ -375,8 +398,6 @@ parse_args(int argc, char *argv[])
 int
 main(int argc, char *argv[])
 {
-	unsigned short int found = 0, ipCount = 0, intIPcount = 0,
-		filter = FALSE;
 	unsigned long int start = 0, end = 0;
 
 	printf("%s", BANNER);
@@ -391,7 +412,7 @@ main(int argc, char *argv[])
 
 	printf("[+] %d (sub)domains and %d IP address(es) found\n", found, ipCount);
 
-	if(intIPcount >= 1)
+	if (intIPcount >= 1)
 		printf("[+] %d internal IP address(es) disclosed\n", intIPcount);
 
 	if (outfmt != OUT_STD)
@@ -405,9 +426,9 @@ main(int argc, char *argv[])
 	return 0;
 }
 
-// return TRUE if domain wildcards are enabled
+/* return TRUE and set wildcard_ip string if domain wildcards are enabled */
 unsigned short int
-wildcarDetect(const char *dom, char *ipstr)
+wildcarDetect(const char *dom, char *wildcard_ip)
 {
 	char strTmp[30] = {'\0'}, s[MAXSTRSIZE] = {'\0'};
 	unsigned short int i = 0, n = 0, max = 0;
@@ -415,20 +436,20 @@ wildcarDetect(const char *dom, char *ipstr)
 
 	srand(time(NULL));
 	max = rand() % 20;
+
 	/* max should be between 10 and 20 */
-	if(max < 10)
-		max = max + 10;
+	if (max < 10)
+		max += 10;
 
 	// generate up to random 20 digits-long subdomain
 	// e.g. 06312580442146732554
 
-	for(i = 0; i < max; ++i) {
+	memset(s, 0, sizeof(s));
+
+	for (i = 0; i < max; ++i) {
 		n = rand() % 10;
 		sprintf(strTmp, "%d", n);
-		if(i == 0)
-			strncpy(s, strTmp, MAXSTRSIZE-strlen(s)-1);
-		else
-			strncat(s, strTmp, MAXSTRSIZE-strlen(s)-1);
+		strncat(s, strTmp, MAXSTRSIZE-strlen(s)-1);
 	}
 	strncat(s, ".", MAXSTRSIZE-strlen(s)-1);
 	strncat(s, dom, MAXSTRSIZE-strlen(s)-1);
@@ -436,9 +457,9 @@ wildcarDetect(const char *dom, char *ipstr)
 
 	// random subdomain resolves, thus wildcards are enabled
 	h = gethostbyname(s); // replace with getaddrinfo() ?
-	if(h) {
-		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[0])), "%s");
-		DEBUG_MSG("wildcard domain\'s IP address: %s\n", ipstr);
+	if (h) {
+		sprintf(wildcard_ip, inet_ntoa(*((struct in_addr *)h->h_addr_list[0])), "%s");
+		DEBUG_MSG("wildcard domain\'s IP address: %s\n", wildcard_ip);
 		return TRUE;
 	}
 	else
@@ -476,18 +497,18 @@ isPrivateIP(char *ip)
 
 	// shortest: 0.0.0.0 - 8 chars inc \0
 	// longest: 255.255.255.255 - 16 chars inc \0
-	if(len < 8 || len > 16)
+	if (len < 8 || len > 16)
 		return 0;
 	// ip addr must have three period signs
-	for(i = 0, j = 0;i < len; ++i) {
-		if(ip[i] == '.')
+	for (i = 0, j = 0;i < len; ++i) {
+		if (ip[i] == '.')
 			++j;
 	}
-	if(j != 3 || ip[0] == '.' || ip[len-1] == '.')
+	if (j != 3 || ip[0] == '.' || ip[len-1] == '.')
 		return 0;
 
 	// 10.0.0.0 - 10.255.255.255 (10/8 prefix)
-	if(strncmp(ip, "10.", 3)==0)
+	if (strncmp(ip, "10.", 3)==0)
 		return 1;
 
 	// 192.168.0.0 - 192.168.255.255 (192.168/16 prefix)
@@ -497,8 +518,8 @@ isPrivateIP(char *ip)
 
 	else {
 		// 172.16.0.0 - 172.31.255.255  (172.16/12 prefix)
-		for(i = 0; i < sizeof(classB) / 8; ++i) {
-			if(strncmp(ip, classB[i], 7) == 0)
+		for (i = 0; i < sizeof(classB) / 8; ++i) {
+			if (strncmp(ip, classB[i], 7) == 0)
 				return 1;
 		}
 		return 0;
@@ -518,24 +539,24 @@ isValidDomain(char *d)
 
 	struct hostent *h;
 
-	if(strlen(d) < 4) // smallest possible domain provided. e.g. a.pl
+	if (strlen(d) < 4) // smallest possible domain provided. e.g. a.pl
 		return 0;
-	if(!strstr(d, ".")) // target domain must have at least one dot. e.g. target.va, branch.target.va
+	if (!strstr(d, ".")) // target domain must have at least one dot. e.g. target.va, branch.target.va
 		return 0;
 	tld = strstr(d, ".");
 	tld = tld + 1;
-	while(strstr(tld, ".")){
+	while (strstr(tld, ".")) {
 		tld = strstr(tld, ".");
 		tld = tld + 1;
 	}
 	DEBUG_MSG("tld\'s length: %d\n", strlen(tld));
 	DEBUG_MSG("dom: %s tld: %s\n", d, tld);
-	if((strlen(tld) < 2) || (strlen(tld) > 6)) // tld must be between 2-6 char. e.g. .museum, .uk
+	if ((strlen(tld) < 2) || (strlen(tld) > 6)) // tld must be between 2-6 char. e.g. .museum, .uk
 		return FALSE;
 
 	// valid domain can only contain digits, letters, dot (.) and dash symbol (-)
 	len = strlen(d);
-	for(i = 0;i < len; ++i) {
+	for (i = 0;i < len; ++i) {
 		if (!(d[i] >= '0' && d[i] <= '9') &&
 			!(d[i] >= 'a' && d[i] <= 'z') &&
 			!(d[i] >= 'A' && d[i] <= 'Z') &&
@@ -545,17 +566,18 @@ isValidDomain(char *d)
 
 	srand(time(NULL));
 	max = rand() % 20;
-	// max should be between 10 and 20
-	if(max < 10)
-		max = max  +(10 - max);
+
+	/* max should be between 10 and 20 */
+	if (max < 10)
+		max += 10;
 
 	// generate up to random 20 digits-long subdomain
 	// e.g. 06312580442146732554
 
-	for(i = 0; i < max; ++i) {
+	for (i = 0; i < max; ++i) {
 		n = rand( )% 10;
 		sprintf(strTmp, "%d", n);
-		if(i == 0)
+		if (i == 0)
 			strncpy(s, strTmp, MAXSTRSIZE-strlen(s)-1);
 		else
 			strncat(s, strTmp, MAXSTRSIZE-strlen(s)-1);
@@ -567,10 +589,10 @@ isValidDomain(char *d)
 	// some domains like proboards.com return more than 1 IP address
 	// when resolving random subdomains (wildcards are enabled)
 	h = gethostbyname(s);
-	if(h) {
-		for(j = 0; h->h_addr_list[j]; ++j)
+	if (h) {
+		for (j = 0; h->h_addr_list[j]; ++j)
 			inet_ntoa(*((struct in_addr *)h->h_addr_list[j]));
-		if(j > 1) {
+		if (j > 1) {
 			DEBUG_MSG("wildcard domain\'s number of IP address(es): %d"
 					" (this causes dnsmap to produce false positives)\n", j);
 			return FALSE;
@@ -596,8 +618,8 @@ isIPblacklisted(char *ip)
 					"0.0.0.0"	// add your false positive IPs here
 	};
 
-	for(i = 0; i < (sizeof(ips) / INET_ADDRSTRLEN); ++i) {
-		if(!strcmp(ips[i], ip))
+	for (i = 0; i < (sizeof(ips) / INET_ADDRSTRLEN); ++i) {
+		if (!strcmp(ips[i], ip))
 			return TRUE;
 	}
 
@@ -605,7 +627,7 @@ isIPblacklisted(char *ip)
 }
 
 
-//FIXME: check me!
+//FIXME: almost same as wildcarDetect. Need to rewrite!
 // return true if usage of public DNS server is detected
 // Note: right now this function only detects openDNS, but might be
 // updated in the future to detect other common public DNS servers
@@ -621,19 +643,18 @@ usesOpenDNS(char *ipstr)
 	max = rand() % 20;
 
 	// max should be between 10 and 20
-	if(max < 10)
-		max = max + 10;
+	if (max < 10)
+		max += 10;
 
 	// generate up to random 20 digits-long subdomain
 	// e.g. 06312580442146732554
 
-	for(i = 0; i < max; ++i) {
+	memset(s, 0, sizeof(s));
+
+	for (i = 0; i < max; ++i) {
 		n = rand() % 10;
 		sprintf(strTmp, "%d", n);
-		if(i==0)
-			strncpy(s, strTmp, MAXSTRSIZE-strlen(s) - 1);
-		else
-			strncat(s, strTmp, MAXSTRSIZE-strlen(s) - 1);
+		strncat(s, strTmp, MAXSTRSIZE-strlen(s) - 1);
 	}
 
 	strncat(s, ".", MAXSTRSIZE-strlen(s) - 1);
@@ -642,14 +663,14 @@ usesOpenDNS(char *ipstr)
 
 	// random invalid domain resolves, thus public DNS in use
 	h = gethostbyname(s);
-	if(!h)
+	if (!h)
 		return FALSE;
 
-	for(i = 0; h->h_addr_list[i]; ++i) {
+	for (i = 0; h->h_addr_list[i]; ++i) {
 		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[i])), "%s");
 		DEBUG_MSG("public DNS server\'s default IP address #%d: %s\n", i + 1, ipstr);
-		for(j = 0;i < (sizeof(ips) / INET_ADDRSTRLEN); ++j) {
-				if(!strcmp(ips[i], ipstr))
+		for (j = 0;i < (sizeof(ips) / INET_ADDRSTRLEN); ++j) {
+				if (!strcmp(ips[i], ipstr))
 					return TRUE;
 		}
 	}
