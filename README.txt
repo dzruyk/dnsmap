@@ -93,7 +93,7 @@ $ ./dnsmap
 
 dnsmap 0.30 - DNS Network Mapper by pagvac (gnucitizen.org)
 
-usage: dnsmap <target-domain> [options]
+usage: dnsmap [options] <target-domain>
 options:
 -w <wordlist-file>
 -r <regular-results-file>

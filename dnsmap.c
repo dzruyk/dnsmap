@@ -1,6 +1,7 @@
 /*
 * ** dnsmap - DNS Network Mapper by pagvac
 * ** Copyright (C) 2010 gnucitizen.org
+* ** Copyright (C) 2013 dzruyk
 * **
 * ** This program is free software; you can redistribute it and/or modify
 * ** it under the terms of the GNU General Public License as published by
@@ -40,7 +41,6 @@ unsigned short int isValidDomain(char *);
 unsigned short int usesOpenDNS(char *);
 unsigned short int isIPblacklisted(char *);
 
-
 #define OUT_STD 0
 #define OUT_REG 1
 #define OUT_CSV 2
@@ -68,9 +68,6 @@ int intIPcount = 0;
 void
 generic_output(char *ipstr, int filter, int i, char *dom)
 {
-	if (strcmp(wildcardIpStr, ipstr) == 0 || filter == TRUE)
-		return;
-
 	if (i == 0) {
 		++found;
 		printf("%s\n", dom);
@@ -103,17 +100,29 @@ generic_output(char *ipstr, int filter, int i, char *dom)
 
 //FIXME: FILTER is unnecessary, rewrite without it!
 void
-check_is_blacklisted(struct hostent *h, char *dom)
+try_resolve_ipv4(char *dom)
 {
+	struct hostent *h;
 	char ipstr[INET_ADDRSTRLEN] = {'\0'};
 	int i, j;
 	int filter = FALSE;
+	struct addrinfo hints;
+
+	memset(&hints, 0, sizeof(hints));
+	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
+	hints.ai_socktype = SOCK_STREAM;
+
+	h = gethostbyname(dom);
 
 	if (!h || isIPblacklisted(inet_ntoa(*((struct in_addr *)h->h_addr_list[0]))))
 		return;
 
 	for (i = 0; h->h_addr_list[i]; ++i) {
-		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[i])), "%s");
+		sprintf(ipstr, "%s", inet_ntoa(*((struct in_addr *)h->h_addr_list[i])));
+
+		if (strcmp(wildcardIpStr, ipstr) == 0)
+			continue;
+
 		for (j = 0; j < filtered_ip_cnt; ++j) {
 			if (strcmp(filterIPs[j], ipstr) == 0) { // filtered IP found
 				// 1st IP of array - weird output formatting bug
@@ -130,6 +139,9 @@ check_is_blacklisted(struct hostent *h, char *dom)
 					break;
 			}
 		}
+		if (filter == TRUE)
+			continue;
+
 		generic_output(ipstr, filter, i, dom);
 	}
 
@@ -141,11 +153,10 @@ check_is_blacklisted(struct hostent *h, char *dom)
 }
 
 void
-check_host(char *dom)
+try_resolve_ipv6(char *dom)
 {
-	struct hostent *h;
-	char ipv6str[INET6_ADDRSTRLEN];
 	struct addrinfo hints, *res, *p;
+	char ipv6str[INET6_ADDRSTRLEN];
 	int i;
 
 	memset(&hints, 0, sizeof(hints));
@@ -153,40 +164,45 @@ check_host(char *dom)
 	hints.ai_socktype = SOCK_STREAM;
 
 	/* ipv6 code modded from www.kame.net */
-	if (getaddrinfo(dom, NULL, &hints, &res) == 0) {
-		printf("%s\n", dom);
-		++found;
-		if (outfmt == OUT_REG)
-			fprintf(fp_out, "%s\n", dom);
-		if (outfmt == OUT_CSV)
-			fprintf(fp_out, "%s", dom);
-		for (p = res, i = 0; p ;p = p->ai_next, ++i) {
-			void *addr;
-			char *ipver;
-			if (p->ai_family==AF_INET6) { // IPv6
-				struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
-				addr = &(ipv6->sin6_addr);
-				ipver = "IPv6";
-			}
-			/* convert the IP to a string and print it: */
-			inet_ntop(p->ai_family, addr, ipv6str, sizeof(ipv6str));
-			printf("%s address #%d: %s\n", ipver, i+1, ipv6str);
-			++ipCount;
-			if (outfmt == OUT_REG)
-				fprintf(fp_out, "%s address #%d: %s\n", ipver, i+1, ipv6str);
-			if (outfmt == OUT_CSV)
-				fprintf(fp_out, ", %s", ipv6str);
+	if (getaddrinfo(dom, NULL, &hints, &res) != 0)
+		return;
+
+	printf("%s\n", dom);
+	++found;
+	if (outfmt == OUT_REG)
+		fprintf(fp_out, "%s\n", dom);
+	if (outfmt == OUT_CSV)
+		fprintf(fp_out, "%s", dom);
+	for (p = res, i = 0; p ;p = p->ai_next, ++i) {
+		void *addr;
+		char *ipver;
+
+		if (p->ai_family==AF_INET6) { // IPv6
+			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+			addr = &(ipv6->sin6_addr);
+			ipver = "IPv6";
 		}
-		printf("\n");
-		if (outfmt == OUT_REG || outfmt == OUT_CSV)
-			fprintf(fp_out, "\n");
-
-		freeaddrinfo(res); // free the linked list
-		// ipv6 code modded from www.kame.net
+		/* convert the IP to a string and print it: */
+		inet_ntop(p->ai_family, addr, ipv6str, sizeof(ipv6str));
+		printf("%s address #%d: %s\n", ipver, i+1, ipv6str);
+		++ipCount;
+		if (outfmt == OUT_REG)
+			fprintf(fp_out, "%s address #%d: %s\n", ipver, i+1, ipv6str);
+		if (outfmt == OUT_CSV)
+			fprintf(fp_out, ",%s", ipv6str);
 	}
-	h = gethostbyname(dom);
+	printf("\n");
+	if (outfmt == OUT_REG || outfmt == OUT_CSV)
+		fprintf(fp_out, "\n");
 
-	check_is_blacklisted(h, dom);
+	freeaddrinfo(res); // free the linked list
+}
+
+void
+check_host(char *dom)
+{
+	try_resolve_ipv6(dom);
+	try_resolve_ipv4(dom);
 
 	/* User wants delay between DNS requests? */
 	if (delay)
@@ -292,12 +308,10 @@ brute_domains()
 		printf("[+] warning: domain might use wildcards. "\
 			"%s will be ignored from results\n", wildcardIpStr);
 
-	if (!use_wordlist) {
+	if (!use_wordlist)
 		use_builtin_list();
-	} else {
+	else
 		use_user_list();
-	}
-
 }
 
 void
@@ -417,7 +431,7 @@ main(int argc, char *argv[])
 
 	if (outfmt != OUT_STD)
 		printf("[+] %s-format results can be found on %s\n",
-		    outfmt == OUT_REG ? "regular" : "csv", wordlist_file);
+		    outfmt == OUT_REG ? "regular" : "csv", results_fn);
 
 	end = (int)time(NULL);
 
@@ -458,7 +472,7 @@ wildcarDetect(const char *dom, char *wildcard_ip)
 	// random subdomain resolves, thus wildcards are enabled
 	h = gethostbyname(s); // replace with getaddrinfo() ?
 	if (h) {
-		sprintf(wildcard_ip, inet_ntoa(*((struct in_addr *)h->h_addr_list[0])), "%s");
+		sprintf(wildcard_ip, "%s", inet_ntoa(*((struct in_addr *)h->h_addr_list[0])));
 		DEBUG_MSG("wildcard domain\'s IP address: %s\n", wildcard_ip);
 		return TRUE;
 	}
@@ -498,32 +512,30 @@ isPrivateIP(char *ip)
 	// shortest: 0.0.0.0 - 8 chars inc \0
 	// longest: 255.255.255.255 - 16 chars inc \0
 	if (len < 8 || len > 16)
-		return 0;
+		return FALSE;
 	// ip addr must have three period signs
-	for (i = 0, j = 0;i < len; ++i) {
+	for (i = 0, j = 0; i < len; ++i) {
 		if (ip[i] == '.')
 			++j;
 	}
 	if (j != 3 || ip[0] == '.' || ip[len-1] == '.')
-		return 0;
+		return FALSE;
 
 	// 10.0.0.0 - 10.255.255.255 (10/8 prefix)
-	if (strncmp(ip, "10.", 3)==0)
-		return 1;
+	if (strncmp(ip, "10.", 3) == 0)
+		return TRUE;
 
 	// 192.168.0.0 - 192.168.255.255 (192.168/16 prefix)
-	else if(strncmp(ip, "192.168.", 8)==0)
-		return 1;
+	else if(strncmp(ip, "192.168.", 8) == 0)
+		return TRUE;
 
 
-	else {
-		// 172.16.0.0 - 172.31.255.255  (172.16/12 prefix)
-		for (i = 0; i < sizeof(classB) / 8; ++i) {
-			if (strncmp(ip, classB[i], 7) == 0)
-				return 1;
-		}
-		return 0;
+	// 172.16.0.0 - 172.31.255.255  (172.16/12 prefix)
+	for (i = 0; i < sizeof(classB) / 8; ++i) {
+		if (strncmp(ip, classB[i], 7) == 0)
+			return TRUE;
 	}
+	return FALSE;
 }
 
 //FIXME: check me!
@@ -540,9 +552,9 @@ isValidDomain(char *d)
 	struct hostent *h;
 
 	if (strlen(d) < 4) // smallest possible domain provided. e.g. a.pl
-		return 0;
+		return FALSE;
 	if (!strstr(d, ".")) // target domain must have at least one dot. e.g. target.va, branch.target.va
-		return 0;
+		return FALSE;
 	tld = strstr(d, ".");
 	tld = tld + 1;
 	while (strstr(tld, ".")) {
@@ -561,7 +573,7 @@ isValidDomain(char *d)
 			!(d[i] >= 'a' && d[i] <= 'z') &&
 			!(d[i] >= 'A' && d[i] <= 'Z') &&
 			!(d[i] >= '-' && d[i] <= '.'))
-			return 0;
+			return FALSE;
 	}
 
 	srand(time(NULL));
@@ -667,7 +679,7 @@ usesOpenDNS(char *ipstr)
 		return FALSE;
 
 	for (i = 0; h->h_addr_list[i]; ++i) {
-		sprintf(ipstr, inet_ntoa(*((struct in_addr *)h->h_addr_list[i])), "%s");
+		sprintf(ipstr, "%s", inet_ntoa(*((struct in_addr *)h->h_addr_list[i])));
 		DEBUG_MSG("public DNS server\'s default IP address #%d: %s\n", i + 1, ipstr);
 		for (j = 0;i < (sizeof(ips) / INET_ADDRSTRLEN); ++j) {
 				if (!strcmp(ips[i], ipstr))

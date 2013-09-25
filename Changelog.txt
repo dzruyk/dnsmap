@@ -1,6 +1,6 @@
-13/10/2013: dnsmap realeased at github.com/dzruyk/dnsmap
+Soon: dnsmap 0.40 realeased at github.com/dzruyk/dnsmap
 * minor user interface changes
-* refactoring
+* Code refactoring
 * bug fixes
 
 20/02/2010: dnsmap 0.30 released at www.gnucitizen.org

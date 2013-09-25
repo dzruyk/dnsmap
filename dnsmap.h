@@ -1,6 +1,7 @@
 /*
 * ** dnsmap - DNS Network Mapper by pagvac
 * ** Copyright (C) 2010 gnucitizen.org
+* ** Copyright (C) 2013 dzruyk
 * **
 * ** This program is free software; you can redistribute it and/or modify
 * ** it under the terms of the GNU General Public License as published by
@@ -19,7 +20,7 @@
 
 #define MAXSUBSIZE 	100
 #define MAXSTRSIZE 	200
-#define BANNER 		"dnsmap 0.30 - DNS Network Mapper by pagvac (gnucitizen.org)\n\n"
+#define BANNER 		"dnsmap 0.40 - DNS Network Mapper by pagvac (gnucitizen.org)\n\n"
 #define USAGE 		"usage: dnsmap [options] <target-domain>\noptions:\n"\
 			"-w <wordlist-file>\n-r <regular-results-file>\n-c <csv-results-file>\n"\
 			"-d <delay-millisecs>\n-i <ips-to-ignore> (useful if you're obtaining false positives)\n\n"
