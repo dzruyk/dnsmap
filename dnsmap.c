@@ -61,12 +61,12 @@ char filterIPs[5][INET_ADDRSTRLEN] = {{'\0'}};
 
 /* FIXME: create context structure */
 char wildcardIpStr[INET_ADDRSTRLEN] = {'\0'};
-int found = 0; 
+int found = 0;
 int ipCount = 0;
 int intIPcount = 0;
 
 void
-generic_output(char *ipstr, int filter, int i, char *dom)
+generic_output(char *ipstr, int i, char *dom)
 {
 	if (i == 0) {
 		++found;
@@ -98,7 +98,7 @@ generic_output(char *ipstr, int filter, int i, char *dom)
 		fprintf(fp_out, ",%s", ipstr);
 }
 
-//FIXME: FILTER is unnecessary, rewrite without it!
+//FIXME: need to rewrite! almost same as try_resolve_ipv6
 void
 try_resolve_ipv4(char *dom)
 {
@@ -142,7 +142,7 @@ try_resolve_ipv4(char *dom)
 		if (filter == TRUE)
 			continue;
 
-		generic_output(ipstr, filter, i, dom);
+		generic_output(ipstr, i, dom);
 	}
 
 	if (strcmp(wildcardIpStr, ipstr) && filter == FALSE) {
@@ -152,6 +152,7 @@ try_resolve_ipv4(char *dom)
 	}
 }
 
+//need to rewrite with generic_output call
 void
 try_resolve_ipv6(char *dom)
 {
@@ -237,10 +238,8 @@ use_builtin_list()
 	char dom[MAXSTRSIZE] = {'\0'};
 	int i;
 
-	maybe_open_result_file();
-
 	printf("[+] searching (sub)domains for %s using built-in wordlist", dnsname);
-	
+
 	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
 
@@ -252,7 +251,6 @@ use_builtin_list()
 
 		check_host(dom);
 	}
-	maybe_close_result_file();
 }
 
 void
@@ -269,8 +267,6 @@ use_user_list()
 		printf("%s\"%s\"!\n\n", "[+] error opening wordlist file ", wordlist_file);
 		exit(1);
 	}
-
-	maybe_open_result_file();
 
 	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
@@ -289,7 +285,6 @@ use_user_list()
 		check_host(dom);
 	}
 	fclose(fp);
-	maybe_close_result_file();
 }
 
 void
@@ -308,10 +303,14 @@ brute_domains()
 		printf("[+] warning: domain might use wildcards. "\
 			"%s will be ignored from results\n", wildcardIpStr);
 
+	maybe_open_result_file();
+
 	if (!use_wordlist)
 		use_builtin_list();
 	else
 		use_user_list();
+
+	maybe_close_result_file();
 }
 
 void
