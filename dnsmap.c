@@ -36,10 +36,9 @@
 // function prototypes
 unsigned short int wildcarDetect(const char *, char *);
 unsigned short int dodelay(unsigned short int);
-unsigned short int isPrivateIP(char *);
+unsigned short int is_private_ip(char *);
 unsigned short int isValidDomain(char *);
 unsigned short int usesOpenDNS(char *);
-unsigned short int isIPblacklisted(char *);
 
 #define OUT_STD 0
 #define OUT_REG 1
@@ -66,21 +65,29 @@ int ipCount = 0;
 int intIPcount = 0;
 
 void
-generic_output(char *ipstr, int i, char *dom)
+output_eol()
 {
-	if (i == 0) {
-		++found;
-		printf("%s\n", dom);
+	printf("\n");
+	if (outfmt == OUT_REG || outfmt == OUT_CSV)
+		fprintf(fp_out, "\n");
+}
 
-		if (outfmt == OUT_REG)
-			fprintf(fp_out, "%s\n", dom);
-		if (outfmt == OUT_CSV)
-			fprintf(fp_out, "%s", dom);
-	}
-	printf("IP address #%d: %s\n", i + 1, ipstr);
-	++ipCount;
+void
+output_domain(char *dom)
+{
+	printf("%s\n", dom);
+	if (outfmt == OUT_REG)
+		fprintf(fp_out, "%s\n", dom);
+	if (outfmt == OUT_CSV)
+		fprintf(fp_out, "%s", dom);
+}
 
-	if (isPrivateIP(ipstr)) {
+void
+output_ip(char *ipstr, char *ipver, int i)
+{
+	printf("%s address #%d: %s\n", ipver, i + 1, ipstr);
+
+	if (is_private_ip(ipstr)) {
 		printf("%s", INTIPWARN);
 		++intIPcount;
 	}
@@ -88,8 +95,8 @@ generic_output(char *ipstr, int i, char *dom)
 		printf("%s", SAMESITEXSSWARN);
 	}
 	if (outfmt == OUT_REG) {
-		fprintf(fp_out, "IP address #%d: %s\n", i + 1, ipstr);
-		if (isPrivateIP(ipstr) && strcmp(wildcardIpStr, ipstr))
+		fprintf(fp_out, "%s address #%d: %s\n", ipver, i + 1, ipstr);
+		if (is_private_ip(ipstr) && strcmp(wildcardIpStr, ipstr))
 			fprintf(fp_out, "%s", INTIPWARN);
 		if (!strcmp(ipstr, "127.0.0.1") && strcmp(wildcardIpStr, ipstr))
 			fprintf(fp_out, "%s", SAMESITEXSSWARN);
@@ -98,112 +105,60 @@ generic_output(char *ipstr, int i, char *dom)
 		fprintf(fp_out, ",%s", ipstr);
 }
 
-//FIXME: need to rewrite! almost same as try_resolve_ipv6
 void
-try_resolve_ipv4(char *dom)
-{
-	struct hostent *h;
-	char ipstr[INET_ADDRSTRLEN] = {'\0'};
-	int i, j;
-	int filter = FALSE;
-	struct addrinfo hints;
-
-	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
-	hints.ai_socktype = SOCK_STREAM;
-
-	h = gethostbyname(dom);
-
-	if (!h || isIPblacklisted(inet_ntoa(*((struct in_addr *)h->h_addr_list[0]))))
-		return;
-
-	for (i = 0; h->h_addr_list[i]; ++i) {
-		sprintf(ipstr, "%s", inet_ntoa(*((struct in_addr *)h->h_addr_list[i])));
-
-		if (strcmp(wildcardIpStr, ipstr) == 0)
-			continue;
-
-		for (j = 0; j < filtered_ip_cnt; ++j) {
-			if (strcmp(filterIPs[j], ipstr) == 0) { // filtered IP found
-				// 1st IP of array - weird output formatting bug
-				if (i != 0 && strcmp(wildcardIpStr, filterIPs[j])) {
-					printf("\n");
-					if (outfmt == OUT_REG || outfmt == OUT_CSV)
-						fprintf(fp_out, "\n");
-				}
-				DEBUG_MSG("%s found and ignored\n", filterIPs[j]);
-				filter = TRUE;
-				if (h->h_addr_list[i + 1])
-					++i;
-				else
-					break;
-			}
-		}
-		if (filter == TRUE)
-			continue;
-
-		generic_output(ipstr, i, dom);
-	}
-
-	if (strcmp(wildcardIpStr, ipstr) && filter == FALSE) {
-		printf("\n");
-		if (outfmt == OUT_REG || outfmt == OUT_CSV)
-			fprintf(fp_out, "\n");
-	}
-}
-
-//need to rewrite with generic_output call
-void
-try_resolve_ipv6(char *dom)
+try_resolve(char *dom)
 {
 	struct addrinfo hints, *res, *p;
-	char ipv6str[INET6_ADDRSTRLEN];
+	char ipstr[INET6_ADDRSTRLEN];
 	int i;
 
 	memset(&hints, 0, sizeof(hints));
-	hints.ai_family = AF_INET6; // AF_INET or AF_INET6 to force version
+	hints.ai_family = AF_UNSPEC; // AF_INET or AF_INET6 to force version
 	hints.ai_socktype = SOCK_STREAM;
 
 	/* ipv6 code modded from www.kame.net */
 	if (getaddrinfo(dom, NULL, &hints, &res) != 0)
 		return;
 
-	printf("%s\n", dom);
 	++found;
-	if (outfmt == OUT_REG)
-		fprintf(fp_out, "%s\n", dom);
-	if (outfmt == OUT_CSV)
-		fprintf(fp_out, "%s", dom);
+
+	output_domain(dom);
+
 	for (p = res, i = 0; p ;p = p->ai_next, ++i) {
 		void *addr;
 		char *ipver;
 
 		if (p->ai_family==AF_INET6) { // IPv6
 			struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)p->ai_addr;
+
 			addr = &(ipv6->sin6_addr);
 			ipver = "IPv6";
+		} else {
+			struct  sockaddr_in *ipv4 = (struct sockaddr_in *)p->ai_addr;
+			addr = &(ipv4->sin_addr);
+
+			ipver = "IPv4";
 		}
 		/* convert the IP to a string and print it: */
-		inet_ntop(p->ai_family, addr, ipv6str, sizeof(ipv6str));
-		printf("%s address #%d: %s\n", ipver, i+1, ipv6str);
-		++ipCount;
-		if (outfmt == OUT_REG)
-			fprintf(fp_out, "%s address #%d: %s\n", ipver, i+1, ipv6str);
-		if (outfmt == OUT_CSV)
-			fprintf(fp_out, ",%s", ipv6str);
-	}
-	printf("\n");
-	if (outfmt == OUT_REG || outfmt == OUT_CSV)
-		fprintf(fp_out, "\n");
+		inet_ntop(p->ai_family, addr, ipstr, sizeof(ipstr));
 
-	freeaddrinfo(res); // free the linked list
+		if (strcmp(wildcardIpStr, ipstr) == 0)
+			continue;
+
+		++ipCount;
+
+		output_ip(ipstr, ipver, i);
+	}
+
+	output_eol();
+
+	freeaddrinfo(res);
 }
 
 void
 check_host(char *dom)
 {
-	try_resolve_ipv6(dom);
-	try_resolve_ipv4(dom);
+	try_resolve(dom);
 
 	/* User wants delay between DNS requests? */
 	if (delay)
@@ -238,7 +193,7 @@ use_builtin_list()
 	char dom[MAXSTRSIZE] = {'\0'};
 	int i;
 
-	printf("[+] searching (sub)domains for %s using built-in wordlist", dnsname);
+	printf("[+] searching (sub)domains for %s using built-in wordlist\n", dnsname);
 
 	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
@@ -314,35 +269,6 @@ brute_domains()
 }
 
 void
-parse_ip_filter(char *str)
-{
-	char *strP;
-	int i;
-
-	// filter out user-provided IP(s)
-	for (filtered_ip_cnt = 1, i = 0; str[i] != '\0'; ++i)
-		if (str[i] == ',')
-			++filtered_ip_cnt;
-
-	DEBUG_MSG("%d IP(s) to filter found\nParsing ...\n", filtered_ip_cnt);
-
-	if (filtered_ip_cnt > 5) {
-		printf(FILTIPINPUTERR);
-		exit(1);
-	}
-	printf("[+] %d provided IP address(es) will be ignored from results: %s\n", filtered_ip_cnt, str);
-	strP = strtok(str, ",");
-	for (i = 0; strP;) {
-		if (strlen(strP) < INET_ADDRSTRLEN) {
-			strncpy(filterIPs[i], strP, INET_ADDRSTRLEN);
-			DEBUG_MSG("%s\n", filterIPs[i]);
-			++i;
-		}
-		strP = strtok(NULL, ",");
-	}
-}
-
-void
 parse_args(int argc, char *argv[])
 {
 	char *name;
@@ -373,9 +299,6 @@ parse_args(int argc, char *argv[])
 				printf("%s", DELAYINPUTERR);
 				exit(1);
 			}
-			break;
-		case 'i':
-			parse_ip_filter(optarg);
 			break;
 		default:
 			printf(FILTIPINPUTERR);
@@ -496,9 +419,10 @@ dodelay(unsigned short int maxmillisecs)
 }
 
 //FIXME: Is we have way to compress code?
+//FIXME: need add IPv6 support
 // return true if IP addr is internal (RFC1918)
 unsigned short int
-isPrivateIP(char *ip)
+is_private_ip(char *ip)
 {
 	char classB[][8] = {"172.16.", "172.17.", "172.18.", "172.19.",
 		"172.20.", "172.21.", "172.22.", "172.23.", "172.24.",
@@ -611,30 +535,6 @@ isValidDomain(char *d)
 	}
 
 	return TRUE;
-}
-
-//FIXME: rly need to hardcode blacklist addresses?
-// return true if IP is blacklisted, false otherwise
-unsigned short int
-isIPblacklisted(char *ip)
-{
-	int i;
-	// add you own blacklisted IP addresses here if dnsmap is producing false positives.
-	// this could be caused by your ISP returning a captive portal search page when
-	// when requesting invalid domains on your browser
-	char ips[][INET_ADDRSTRLEN] = {
-					"81.200.64.50",
-					"67.215.66.132",
-					"1.2.3.4",
-					"0.0.0.0"	// add your false positive IPs here
-	};
-
-	for (i = 0; i < (sizeof(ips) / INET_ADDRSTRLEN); ++i) {
-		if (!strcmp(ips[i], ip))
-			return TRUE;
-	}
-
-	return FALSE;
 }
 
 
