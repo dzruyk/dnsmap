@@ -40,9 +40,11 @@ unsigned short int is_private_ip(char *);
 unsigned short int isValidDomain(char *);
 unsigned short int usesOpenDNS(char *);
 
-#define OUT_STD 0
-#define OUT_REG 1
-#define OUT_CSV 2
+enum {
+	OUT_STD = 0,
+	OUT_REG = 1,
+	OUT_CSV = 2
+};
 
 //some global variables
 char *dnsname = NULL;
