@@ -51,13 +51,11 @@ int use_wordlist = 0;
 char wordlist_file[MAXSTRSIZE] = {'\0'};
 
 int delay = 0;
+int threads = 1;
 
 int outfmt = OUT_STD;
 char results_fn[MAXSTRSIZE] = {'\0'};
 FILE *fp_out;
-
-int filtered_ip_cnt = 0;
-char filterIPs[5][INET_ADDRSTRLEN] = {{'\0'}};
 
 /* FIXME: create context structure */
 char wildcardIpStr[INET_ADDRSTRLEN] = {'\0'};
@@ -285,6 +283,10 @@ parse_args(int argc, char *argv[])
 			if (delay < 1 || delay > 300000)
 				error(1, "%s", DELAYINPUTERR);
 			break;
+		case 't':
+			threads = atoi(optarg);
+			if (threads < 1 || threads > 512)
+				error(1, "number of threads must be between 1 and 512");
 		default:
 			error(1, FILTIPINPUTERR);
 			break;
@@ -367,8 +369,8 @@ gen_rand_domain(char *dst, const char *dom)
 		sprintf(strTmp, "%d", n);
 		strncat(dst, strTmp, MAXSTRSIZE-strlen(dst)-1);
 	}
-	strncat(dst, ".", MAXSTRSIZE-strlen(dst)-1);
-	strncat(dst, dom, MAXSTRSIZE-strlen(dst)-1);
+	strncat(dst, ".", MAXSTRSIZE - strlen(dst) - 1);
+	strncat(dst, dom, MAXSTRSIZE - strlen(dst) - 1);
 }
 
 /* return TRUE and set wildcard_ip string if domain wildcards are enabled */
