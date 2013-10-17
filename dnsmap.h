@@ -56,6 +56,16 @@ do {\
 
 #endif
 
+#define error(status, fmt, arg...) \
+do { \
+        fprintf(stderr, "error: %s:%d %s: "fmt, \
+                        __FILE__, \
+                        __LINE__, \
+                        __FUNCTION__, \
+                        ##arg); \
+        fflush(stderr); \
+        exit(status);   \
+} while (0)
 
 // buil-in list of subdomains
 // mainly targeting English and Spanish keywords
