@@ -63,6 +63,130 @@ int found = 0;
 int ipCount = 0;
 int intIPcount = 0;
 
+#define MAX_DOMS 16
+
+struct thread_ctx {
+	pthread_t pthread;
+	int thread_id;
+	int n_doms;
+	char doms[MAX_DOMS][MAXSTRSIZE];
+	int head;
+};
+
+inline void *
+xmalloc(size_t sz)
+{       
+        void *tmp;
+        if ((tmp = malloc(sz)) == NULL)
+                error(1, "malloc_err");
+        return tmp;
+}
+
+#include <pthread.h>
+
+/*
+ * запихать мьютекс в структуру, поправить Makefile, затестить
+ */
+void *
+worker(void *ptr)
+{
+	struct thread_ctx *ctx = (struct thread_ctx *) ptr;
+
+	while (1) {
+		char *dom;
+		int head, n;
+
+		pthread_mutex_lock(mutex[ctx->thread_id]);
+
+		n = ctx->n_doms;
+		head = ctx->head;
+
+		pthread_mutex_unlock(mutex[ctx->thread_id]);
+
+		if (n <= 0) {
+			sleep(1);
+			continue;
+		}
+
+		dom = ctx->doms[head];
+
+		check_host(dom);
+
+		pthread_mutex_lock(mutex[ctx->thread_id]);
+		ctx->head = (ctx->head + 1) % MAX_DOMS;
+		ctx->n_doms--;
+		pthread_mutex_unlock(mutex[ctx->thread_id]);
+	}
+
+	return NULL;
+}
+
+int
+doms_buf_is_full(struct thread_ctx *ctx)
+{
+	if (ctx->n_sites == MAX_DOMS)
+		return TRUE;
+
+	return FALSE;
+}
+
+void
+doms_buf_fill_from_file(struct thread_ctx *ctx)
+{
+	int n;
+	pthread_mutex_lock(mutex[ctx->thread_id]);
+
+	ctx->n_doms++;
+	n = (ctx->head + ctx->n_sites) % MAX_DOMS;
+
+	pthread_mutex_unlock(mutex[ctx->thread_id]);
+
+	fscanf(fp, "%100s", ctx->doms[n]);
+}
+
+void
+server()
+{
+	struct thread_ctx *thread_ctx;
+	int i;
+	int nfull;
+
+	sz = sizeof(*thread_ctx) * threads;
+
+	thread_ctx = xmalloc(sz);
+	memset(thread_ctx, 0, sz);
+
+	for (i = 0; i < threads; i++) {
+		thread_ctx[i].thread_id = i;
+
+		if (pthread_create(&(thread_ctx[i].pthread), NULL,
+		    worker, &thread_ctx[i]) != 0)
+			error(1, "pthread_create error\n");
+	}
+
+	while (TRUE) {
+		nfull = 0;
+		for (i = 0; i < threads; i++) {
+			if (feof(fp))
+				break;
+			if (doms_buf_is_full(&thread_ctx[i])) {
+				nfull++;
+				continue;
+			}
+			doms_buf_fill_from_file(&thread_ctx[i]);
+		}
+		if (nfull == threads) {
+			DEBUG("all threads are full!\n");
+		}
+	}
+
+	for (i = 0; i < threads; i++) {
+		pthread_cancel(thread_ctx[i].pthread);
+	}
+
+	free (thread_ctx);
+}
+
 void
 output_eol()
 {
@@ -217,6 +341,11 @@ use_user_list()
 
 	if (delay >= 1)
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
+
+	if (threads > 1) {
+		server();
+		return;
+	}
 
 	while (!feof(fp)) {
 		for (i = 0; i < strlen(dom); ++i)
