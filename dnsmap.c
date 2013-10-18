@@ -39,6 +39,8 @@ unsigned short int dodelay(unsigned short int);
 unsigned short int is_private_ip(char *);
 unsigned short int isValidDomain(char *);
 
+void check_host(char *dom);
+
 enum {
 	OUT_STD = 0,
 	OUT_REG = 1,
@@ -66,6 +68,7 @@ int intIPcount = 0;
 #define MAX_DOMS 16
 
 struct thread_ctx {
+	pthread_mutex_t mutex;
 	pthread_t pthread;
 	int thread_id;
 	int n_doms;
@@ -75,11 +78,11 @@ struct thread_ctx {
 
 inline void *
 xmalloc(size_t sz)
-{       
-        void *tmp;
-        if ((tmp = malloc(sz)) == NULL)
-                error(1, "malloc_err");
-        return tmp;
+{
+	void *tmp;
+	if ((tmp = malloc(sz)) == NULL)
+		error(1, "malloc_err");
+	return tmp;
 }
 
 #include <pthread.h>
@@ -96,12 +99,12 @@ worker(void *ptr)
 		char *dom;
 		int head, n;
 
-		pthread_mutex_lock(mutex[ctx->thread_id]);
+		pthread_mutex_lock(&ctx->mutex);
 
 		n = ctx->n_doms;
 		head = ctx->head;
 
-		pthread_mutex_unlock(mutex[ctx->thread_id]);
+		pthread_mutex_unlock(&ctx->mutex);
 
 		if (n <= 0) {
 			sleep(1);
@@ -112,10 +115,10 @@ worker(void *ptr)
 
 		check_host(dom);
 
-		pthread_mutex_lock(mutex[ctx->thread_id]);
+		pthread_mutex_lock(&ctx->mutex);
 		ctx->head = (ctx->head + 1) % MAX_DOMS;
 		ctx->n_doms--;
-		pthread_mutex_unlock(mutex[ctx->thread_id]);
+		pthread_mutex_unlock(&ctx->mutex);
 	}
 
 	return NULL;
@@ -124,7 +127,7 @@ worker(void *ptr)
 int
 doms_buf_is_full(struct thread_ctx *ctx)
 {
-	if (ctx->n_sites == MAX_DOMS)
+	if (ctx->n_doms == MAX_DOMS)
 		return TRUE;
 
 	return FALSE;
@@ -134,12 +137,12 @@ void
 doms_buf_fill_from_file(struct thread_ctx *ctx)
 {
 	int n;
-	pthread_mutex_lock(mutex[ctx->thread_id]);
+	pthread_mutex_lock(&ctx->mutex);
 
 	ctx->n_doms++;
-	n = (ctx->head + ctx->n_sites) % MAX_DOMS;
+	n = (ctx->head + ctx->n_doms) % MAX_DOMS;
 
-	pthread_mutex_unlock(mutex[ctx->thread_id]);
+	pthread_mutex_unlock(&ctx->mutex);
 
 	fscanf(fp, "%100s", ctx->doms[n]);
 }
@@ -148,7 +151,7 @@ void
 server()
 {
 	struct thread_ctx *thread_ctx;
-	int i;
+	int i, sz;
 	int nfull;
 
 	sz = sizeof(*thread_ctx) * threads;
@@ -157,6 +160,7 @@ server()
 	memset(thread_ctx, 0, sz);
 
 	for (i = 0; i < threads; i++) {
+		pthread_mutex_init(&thread_ctx[i].mutex, NULL);
 		thread_ctx[i].thread_id = i;
 
 		if (pthread_create(&(thread_ctx[i].pthread), NULL,
@@ -182,6 +186,7 @@ server()
 
 	for (i = 0; i < threads; i++) {
 		pthread_cancel(thread_ctx[i].pthread);
+		pthread_mutex_destroy(&thread_ctx[i].mutex);
 	}
 
 	free (thread_ctx);
