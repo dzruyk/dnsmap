@@ -1,9 +1,10 @@
 CC=gcc
 CFLAGS=-I. -Wall -ggdb
 BINDIR=/usr/local/bin
+LIBS=-lpthread
 
 dnsmap: dnsmap.c dnsmap.h
-	$(CC) $(CFLAGS) -o dnsmap dnsmap.c
+	$(CC) $(CFLAGS) -o dnsmap dnsmap.c $(LIBS)
 clean:
 	rm -rf *~ *.o dnsmap
 

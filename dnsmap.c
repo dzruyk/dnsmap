@@ -87,8 +87,21 @@ xmalloc(size_t sz)
 
 #include <pthread.h>
 
+/* FIXME: add length argument */
+
+char *
+get_next_domain(char *dom)
+{
+	DEBUG_MSG("lengh of dom: %d\n", strlen(dom));
+	strncat(dom, ".", MAXSTRSIZE-strlen(dom) - 1);
+	strncat(dom, dnsname, MAXSTRSIZE-strlen(dom) - 1);
+
+	DEBUG_MSG("brute-forced domain: %s\n", dom);
+	return dom;
+}
+
 /*
- * запихать мьютекс в структуру, поправить Makefile, затестить
+ * поправить Makefile, затестить
  */
 void *
 worker(void *ptr)
@@ -96,6 +109,7 @@ worker(void *ptr)
 	struct thread_ctx *ctx = (struct thread_ctx *) ptr;
 
 	while (1) {
+		DEBUG_MSG("worker next iteration\n");
 		char *dom;
 		int head, n;
 
@@ -113,7 +127,7 @@ worker(void *ptr)
 
 		dom = ctx->doms[head];
 
-		check_host(dom);
+		check_host(get_next_domain(dom));
 
 		pthread_mutex_lock(&ctx->mutex);
 		ctx->head = (ctx->head + 1) % MAX_DOMS;
@@ -134,7 +148,7 @@ doms_buf_is_full(struct thread_ctx *ctx)
 }
 
 void
-doms_buf_fill_from_file(struct thread_ctx *ctx)
+doms_buf_fill_from_file(FILE *fp, struct thread_ctx *ctx)
 {
 	int n;
 	pthread_mutex_lock(&ctx->mutex);
@@ -148,7 +162,7 @@ doms_buf_fill_from_file(struct thread_ctx *ctx)
 }
 
 void
-server()
+server(FILE *fp)
 {
 	struct thread_ctx *thread_ctx;
 	int i, sz;
@@ -177,10 +191,11 @@ server()
 				nfull++;
 				continue;
 			}
-			doms_buf_fill_from_file(&thread_ctx[i]);
+			doms_buf_fill_from_file(fp, &thread_ctx[i]);
 		}
 		if (nfull == threads) {
-			DEBUG("all threads are full!\n");
+			DEBUG_MSG("all threads are full!\n");
+			sleep(5);
 		}
 	}
 
@@ -348,7 +363,9 @@ use_user_list()
 		printf("[+] using maximum random delay of %d ms between requests\n", delay);
 
 	if (threads > 1) {
-		server();
+		/* FIXME: avoid code duplicate */
+		server(fp);
+		fclose(fp);
 		return;
 	}
 
@@ -398,7 +415,7 @@ parse_args(int argc, char *argv[])
 	if (argc == 1)
 		error(1, "%s%s", USAGE, EXAMPLES);
 
-	while ((opt = getopt(argc, argv, "w:r:c:d:i:")) != -1) {
+	while ((opt = getopt(argc, argv, "w:r:c:d:i:t:")) != -1) {
 		switch (opt) {
 		case 'w':
 			use_wordlist = TRUE;
@@ -417,10 +434,14 @@ parse_args(int argc, char *argv[])
 			if (delay < 1 || delay > 300000)
 				error(1, "%s", DELAYINPUTERR);
 			break;
+		case 'i':
+			error(1, "Not implemented yet\n");
+			break;
 		case 't':
 			threads = atoi(optarg);
 			if (threads < 1 || threads > 512)
 				error(1, "number of threads must be between 1 and 512");
+			break;
 		default:
 			error(1, FILTIPINPUTERR);
 			break;
@@ -430,7 +451,7 @@ parse_args(int argc, char *argv[])
 	argv += optind;
 
 	if (argc < 1)
-		error(1, "%s%s", USAGE, EXAMPLES);
+		error(1, "\n%s%s", USAGE, EXAMPLES);
 
 	if (outfmt != OUT_STD) {
 		strncpy(results_fn, name, MAXSTRSIZE - strlen(results_fn) - 1);
